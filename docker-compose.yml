@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  database:
+    image: mysql:8.0
+    container_name: daw_mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      # Guardar los datos en local para que no se borren
+      - ./db_data:/var/lib/mysql
+    networks:
+      - red_daw
+
+  backend:
+    build:
+      context: ./docker/php
+    container_name: daw_php
+    environment:
+      # Pasar variables para usarlas en el codigo PHP
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_DATABASE}
+    volumes:
+      - ./src:/var/www/html
+    depends_on:
+      - database
+    networks:
+      - red_daw
+
+  webserver:
+    image: nginx:alpine
+    container_name: daw_nginx
+    ports:
+      - "${WEB_PORT}:80"
+    volumes:
+      - ./src:/var/www/html
+      - ./docker/nginx:/etc/nginx/conf.d
+    depends_on:
+      - backend
+    networks:
+      - red_daw
+
+networks:
+  red_daw:
+    driver: bridge
